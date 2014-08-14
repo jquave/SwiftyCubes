@@ -16,22 +16,17 @@ class ViewController: UIViewController {
     // Show cubes? (Shows text labels if false)
     let showCubes = true
     
-    // Tag for cube views
-    let CUBE_TAG = 100
-    
-    
     // These properties are explained in detail as they're used
     var animator : UIDynamicAnimator?
     var gravity : UIGravityBehavior?
     var collisionBehavior : UICollisionBehavior?
-    var activeSnapper : UISnapBehavior?
-    var physicsObjects = [UIView]()
     
     /// The "texture" on our cubes.
     let colorPattern = UIColor(patternImage: UIImage(named: "checkered"))
     
-    /// The currently selected cube
-    var selectedView : UIView? = nil
+    /// For each cube that is being dragged, we have a snapper. There can be multiple snappers because multitouch!
+    var snappers: [UIView: UISnapBehavior] = [:]
+
     
     /// This is called when the view loads. Why? Because iOS just does that in View Controllers.
     override func viewDidLoad() {
@@ -47,16 +42,22 @@ class ViewController: UIViewController {
         // Just a few pixels of spacing to go between the cubes
         let spacing = CGFloat(2.0)
         
+        // Will hold all of our cubes.
+        var cubes: [UIView] = []
+        
         // Nested loop, goes through and creates a bunch of cubes by stepping through, adding
         // the appropriate spacing and widths as needed.
         for (var x : CGFloat = spacing; x<screenWidth; x+=cubeSize + spacing) {
             for (var y : CGFloat = spacing; y<screenWidth; y+=cubeSize + spacing) {
-                
                 // Calls our addCube method above with our x and y locations, and the cubeSize we figured out earlier.
-                addCube(x, y: y, size: cubeSize)
+                cubes.append(createCube(x, y: y, size: cubeSize))
             }
         }
         
+        // Add the cubes to the main view
+        for cube in cubes {
+            self.view.addSubview(cube)
+        }
         
         // An animator is needed for any of this to work
         animator = UIDynamicAnimator(referenceView: self.view)
@@ -64,9 +65,8 @@ class ViewController: UIViewController {
         // Create an empty gravity behavior, we need this for the cubes to fall
         gravity = UIGravityBehavior()
         
-        // Create a collision behavior, with all the physicsObjects that ended up in our physicsObjects array
-        // They get added inside of the addCube() function
-        collisionBehavior = UICollisionBehavior(items: physicsObjects)
+        // Create a collision behavior with all of our cubes
+        collisionBehavior = UICollisionBehavior(items: cubes)
         
         // Set the references bounds in to boundaries.
         // Basically this means just take the area that the cube takes up as a View, and turn that in to
@@ -74,23 +74,52 @@ class ViewController: UIViewController {
         collisionBehavior?.translatesReferenceBoundsIntoBoundary = true
         
         
-        // Now loops through all the physicsObjects and add them to the gravity behavior.
-        for physicsObject in self.physicsObjects {
-            gravity?.addItem(physicsObject)
+        // Add all cubes to the gravity behavior.
+        for cube in cubes {
+            gravity?.addItem(cube)
         }
         
         // Finally, add the gravity and collision behaviors on to the animator. iOS takes over from here.
         animator!.addBehavior(gravity)
         animator!.addBehavior(collisionBehavior)
         
-        
         // Call the superclass method for viewDidLoad()
         super.viewDidLoad()
     }
     
+    // This method is called whenever one of the gesture recognizers created in the addCube method detects a drag gesture.
+    func onDrag(recognizer: UIPanGestureRecognizer) {
+        // The recognizer's view is the view we added the gesture recognizer to - that is the cube view!
+        let cubeView = recognizer.view
+        
+        // The snappers dictionary contains the snap behaviours for each cube that is being dragged around.
+        // Since a drag gesture was performed, we want to remove the snap behaviour for that cube. We create a new one later.
+        if let snapper = snappers[cubeView] {
+            animator?.removeBehavior(snapper)
+            snappers[cubeView] = nil
+        }
+        
+        // In case the gesture changed (it might also just have started, stopped, or been cancelled), we create a new UISnapBehavior.
+        if recognizer.state == .Changed {
+            let snapper = UISnapBehavior(
+                item: cubeView,
+                // We can get the point of the finger by asking the gesture recognizer for it's position in the view.
+                snapToPoint: recognizer.locationInView(self.view)
+            )
+            
+            // Save the snapping behaviour in the dictionary so we can remove it when the finger moves next time.
+            snappers[cubeView] = snapper
+                
+            // Upping the damping makes the snap behavior more elastic and loose. It's a personal preference.
+            snapper.damping = 2
+            
+            // Now add the behavior to our animator so it kicks in.
+            animator?.addBehavior(snapper)
+        }
+    }
     
-    /// Creates a cube object and adds it to the view, as well as the physicsObjects array.
-    func addCube(x : CGFloat, y: CGFloat, size cubeSize : CGFloat) {
+    /// Creates a cube object.
+    func createCube(x : CGFloat, y: CGFloat, size cubeSize : CGFloat) -> UIView {
         
         if(showCubes) {
             // Instantiate a new UIView
@@ -108,16 +137,12 @@ class ViewController: UIViewController {
             // Set the background color to be colorPattern, which is define above as a UIColor containing a tiled image
             cube.backgroundColor = colorPattern
             
-            // Set the tag of this view to the constant CUBE_TAG, so we can identify it later as a physics cube
-            cube.tag = CUBE_TAG
-            
-            
-            // Add the cube to the main view
-            self.view.addSubview(cube)
-            
-            
-            // Add the cube to the list of physicsObjects (a property of ViewController)
-            physicsObjects.append(cube)
+            // We add a pan-gesture recognizer to drag a cube, for each cube separately.
+            // "Pan"ning is basically equivalent to dragging in our case.
+            // The gesture recognizer will call our onDrag: method whenever the finger moves.
+            cube.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: "onDrag:"))
+
+            return cube
         }
         else {
         
@@ -126,125 +151,13 @@ class ViewController: UIViewController {
             var txtLabel = UILabel(frame: CGRectMake(x, y, cubeSize, cubeSize))
             txtLabel.text = "Hello!"
             txtLabel.userInteractionEnabled = true
-            txtLabel.tag = CUBE_TAG
             txtLabel.layer.borderColor = UIColor(red: 0, green: 0.5, blue: 0, alpha: 1).CGColor
             txtLabel.layer.borderWidth = 1
             txtLabel.textColor = UIColor.blueColor()
             txtLabel.layer.cornerRadius = cubeSize/4.0
-            
-            self.view.addSubview(txtLabel)
-            
-            physicsObjects.append(txtLabel)
-        }
-    }
-    
-    
-    
-    // ************************************
-    // MARK: Touch callback methods
-    // ************************************
-    
-    /// iOS calls this when the user places a finger (our clicks the mouse) on the screen
-    override func touchesBegan(touches: NSSet!, withEvent event: UIEvent!) {
-        
-        // See if we can get the view that was clicked by accessing the view property in touches.anyObject()
-        if let tappedView = touches.anyObject().view {
-            
-            // If a view was found, check and see if it's tag is CUBE_TAG
-            // Remember earlier? We set the tag of all views to CUBE_TAG?
-            // That was so we can check it here.
-            if(tappedView.tag == CUBE_TAG) {
-                // Okay, this is a legit cube, store this view as the "selectedView" property
-                selectedView = tappedView
-            }
-        }
-    }
-    
-    /// iOS calls this when the user has already had a finger on the screen, and now they're moving it around
-    override func touchesMoved(touches: NSSet!, withEvent event: UIEvent!) {
-        
-        // activeSnapper is a property we created for the Snap behavior we want when the user drags around a cube
-        // Since the user is now moving around their finger, we remove any existing snap behavior and create a fresh one
-        if(activeSnapper != nil) {
-            animator?.removeBehavior(activeSnapper)
-        }
-        
-        // Since the user is dragging around their finger, we want to act upon the selectedView.
-        // But, it might be nil since they could just be dragging around the background.
-        // Imagine a user trying to grab a cube, but they have terrible aim.
-        if(selectedView != nil) {
-            // Create a new Snap behavior for the selectedView, and set the point to be whatever the location
-            // of the user's touch is, inside of the main view (the whole screen in this case)
-            activeSnapper = UISnapBehavior(item: selectedView, snapToPoint: touches.anyObject().locationInView(self.view))
-            
-            // Upping the damping makes the snap behavior more elastic and loose. It's a personal preference.
-            activeSnapper?.damping = 2
-            
-            // Now add the behavior to our animator so it kicks in.
-            animator?.addBehavior(activeSnapper)
-        }
-    }
-    
-    /// iOS calls this when the user slides their finger clear off the screen
-    override func touchesCancelled(touches: NSSet!, withEvent event: UIEvent!) {
-        // Since they aren't touching the screen any more, just nil out the selectedView and remove any snapping behaviors
-        selectedView = nil
-        if(activeSnapper != nil) {
-            animator?.removeBehavior(activeSnapper)
-        }
-    }
+            txtLabel.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: "onDrag:"))
 
-    
-    /// iOS calls this when the user lifts their finger off the screen
-    override func touchesEnded(touches: NSSet!, withEvent event: UIEvent!) {
-        // Same as above...
-        // "Since they aren't touching the screen any more, just nil out the selectedView and remove any snapping behaviors"
-        selectedView = nil
-        if(activeSnapper != nil) {
-            animator?.removeBehavior(activeSnapper)
+            return txtLabel
         }
     }
-
-    
-
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
