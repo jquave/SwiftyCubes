@@ -11,21 +11,21 @@ import UIKit
 class ViewController: UIViewController {
     
     /// How many cubes?
-    let numCubes = 50.0
+    let numCubes: Float = 50.0
     
     // Show cubes? (Shows text labels if false)
     let showCubes = true
     
     // These properties are explained in detail as they're used
-    var animator : UIDynamicAnimator?
-    var gravity : UIGravityBehavior?
-    var collisionBehavior : UICollisionBehavior?
+    var animator = UIDynamicAnimator()
+    var gravity = UIGravityBehavior()
+    var collisionBehavior = UICollisionBehavior()
     
     /// The "texture" on our cubes.
     let colorPattern = UIColor(patternImage: UIImage(named: "checkered"))
     
     /// For each cube that is being dragged, we have a snapper. There can be multiple snappers because multitouch!
-    var snappers: [UIView: UISnapBehavior] = [:]
+    var snappers = [UIView: UISnapBehavior]()
 
     
     /// This is called when the view loads. Why? Because iOS just does that in View Controllers.
@@ -36,19 +36,19 @@ class ViewController: UIViewController {
         // We use the bounds to get the width of the screen and set the size of our cubes to be
         // whatever that is divided by the square root of the number of cubes. This gives us a
         // size of cube we know we can fit numCubes of on to the screen.
-        let screenWidth = CGFloat(UIScreen.mainScreen().bounds.size.width)
-        let cubeSize = CGFloat(screenWidth) / CGFloat(sqrt(Float(numCubes)))
+        let screenWidth = UIScreen.mainScreen().bounds.size.width
+        let cubeSize = screenWidth / CGFloat(sqrt(numCubes))
         
         // Just a few pixels of spacing to go between the cubes
-        let spacing = CGFloat(2.0)
+        let spacing: CGFloat = 2.0
         
         // Will hold all of our cubes.
-        var cubes: [UIView] = []
+        var cubes = [UIView]()
         
         // Nested loop, goes through and creates a bunch of cubes by stepping through, adding
         // the appropriate spacing and widths as needed.
-        for (var x : CGFloat = spacing; x<screenWidth; x+=cubeSize + spacing) {
-            for (var y : CGFloat = spacing; y<screenWidth; y+=cubeSize + spacing) {
+        for (var x = spacing; x<screenWidth; x+=cubeSize + spacing) {
+            for (var y = spacing; y<screenWidth; y+=cubeSize + spacing) {
                 // Calls our addCube method above with our x and y locations, and the cubeSize we figured out earlier.
                 cubes.append(createCube(x, y: y, size: cubeSize))
             }
@@ -71,17 +71,17 @@ class ViewController: UIViewController {
         // Set the references bounds in to boundaries.
         // Basically this means just take the area that the cube takes up as a View, and turn that in to
         // collision boundaries. This includes the screen edges.
-        collisionBehavior?.translatesReferenceBoundsIntoBoundary = true
+        collisionBehavior.translatesReferenceBoundsIntoBoundary = true
         
         
         // Add all cubes to the gravity behavior.
         for cube in cubes {
-            gravity?.addItem(cube)
+            gravity.addItem(cube)
         }
         
         // Finally, add the gravity and collision behaviors on to the animator. iOS takes over from here.
-        animator!.addBehavior(gravity)
-        animator!.addBehavior(collisionBehavior)
+        animator.addBehavior(gravity)
+        animator.addBehavior(collisionBehavior)
         
         // Call the superclass method for viewDidLoad()
         super.viewDidLoad()
@@ -95,7 +95,7 @@ class ViewController: UIViewController {
         // The snappers dictionary contains the snap behaviours for each cube that is being dragged around.
         // Since a drag gesture was performed, we want to remove the snap behaviour for that cube. We create a new one later.
         if let snapper = snappers[cubeView] {
-            animator?.removeBehavior(snapper)
+            animator.removeBehavior(snapper)
             snappers[cubeView] = nil
         }
         
@@ -114,14 +114,14 @@ class ViewController: UIViewController {
             snapper.damping = 2
             
             // Now add the behavior to our animator so it kicks in.
-            animator?.addBehavior(snapper)
+            animator.addBehavior(snapper)
         }
     }
     
     /// Creates a cube object.
     func createCube(x : CGFloat, y: CGFloat, size cubeSize : CGFloat) -> UIView {
         
-        if(showCubes) {
+        if showCubes {
             // Instantiate a new UIView
             var cube = UIView()
             
