@@ -20,14 +20,13 @@ class ViewController: UIViewController {
     var animator : UIDynamicAnimator?
     var gravity : UIGravityBehavior?
     var collisionBehavior : UICollisionBehavior?
-    var physicsObjects = [UIView]()
     
     /// The "texture" on our cubes.
     let colorPattern = UIColor(patternImage: UIImage(named: "checkered"))
     
-    /// For each cube that is being dragged, we have a snapper. There can be multiple snappers because of multitouch!
+    /// For each cube that is being dragged, we have a snapper. There can be multiple snappers because multitouch!
     var snappers: [UIView: UISnapBehavior] = [:]
-    
+
     
     /// This is called when the view loads. Why? Because iOS just does that in View Controllers.
     override func viewDidLoad() {
@@ -43,16 +42,22 @@ class ViewController: UIViewController {
         // Just a few pixels of spacing to go between the cubes
         let spacing = CGFloat(2.0)
         
+        // Will hold all of our cubes.
+        var cubes: [UIView] = []
+        
         // Nested loop, goes through and creates a bunch of cubes by stepping through, adding
         // the appropriate spacing and widths as needed.
         for (var x : CGFloat = spacing; x<screenWidth; x+=cubeSize + spacing) {
             for (var y : CGFloat = spacing; y<screenWidth; y+=cubeSize + spacing) {
-                
                 // Calls our addCube method above with our x and y locations, and the cubeSize we figured out earlier.
-                addCube(x, y: y, size: cubeSize)
+                cubes.append(createCube(x, y: y, size: cubeSize))
             }
         }
         
+        // Add the cubes to the main view
+        for cube in cubes {
+            self.view.addSubview(cube)
+        }
         
         // An animator is needed for any of this to work
         animator = UIDynamicAnimator(referenceView: self.view)
@@ -60,9 +65,8 @@ class ViewController: UIViewController {
         // Create an empty gravity behavior, we need this for the cubes to fall
         gravity = UIGravityBehavior()
         
-        // Create a collision behavior, with all the physicsObjects that ended up in our physicsObjects array
-        // They get added inside of the addCube() function
-        collisionBehavior = UICollisionBehavior(items: physicsObjects)
+        // Create a collision behavior with all of our cubes
+        collisionBehavior = UICollisionBehavior(items: cubes)
         
         // Set the references bounds in to boundaries.
         // Basically this means just take the area that the cube takes up as a View, and turn that in to
@@ -70,9 +74,9 @@ class ViewController: UIViewController {
         collisionBehavior?.translatesReferenceBoundsIntoBoundary = true
         
         
-        // Now loops through all the physicsObjects and add them to the gravity behavior.
-        for physicsObject in self.physicsObjects {
-            gravity?.addItem(physicsObject)
+        // Add all cubes to the gravity behavior.
+        for cube in cubes {
+            gravity?.addItem(cube)
         }
         
         // Finally, add the gravity and collision behaviors on to the animator. iOS takes over from here.
@@ -105,17 +109,17 @@ class ViewController: UIViewController {
             
             // Save the snapping behaviour in the dictionary so we can remove it when the finger moves next time.
             snappers[cubeView] = snapper
-            
+                
             // Upping the damping makes the snap behavior more elastic and loose. It's a personal preference.
-            snapper.damping = 100
+            snapper.damping = 2
             
             // Now add the behavior to our animator so it kicks in.
             animator?.addBehavior(snapper)
         }
     }
     
-    /// Creates a cube object and adds it to the view, as well as the physicsObjects array.
-    func addCube(x : CGFloat, y: CGFloat, size cubeSize : CGFloat) {
+    /// Creates a cube object.
+    func createCube(x : CGFloat, y: CGFloat, size cubeSize : CGFloat) -> UIView {
         
         if(showCubes) {
             // Instantiate a new UIView
@@ -133,38 +137,27 @@ class ViewController: UIViewController {
             // Set the background color to be colorPattern, which is define above as a UIColor containing a tiled image
             cube.backgroundColor = colorPattern
             
-            // Set the tag of this view to the constant CUBE_TAG, so we can identify it later as a physics cube
-            cube.tag = CUBE_TAG
-            
             // We add a pan-gesture recognizer to drag a cube, for each cube separately.
             // "Pan"ning is basically equivalent to dragging in our case.
             // The gesture recognizer will call our onDrag: method whenever the finger moves.
             cube.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: "onDrag:"))
-            
-            // Add the cube to the main view
-            self.view.addSubview(cube)
-            
-            
-            // Add the cube to the list of physicsObjects (a property of ViewController)
-            physicsObjects.append(cube)
+
+            return cube
         }
         else {
-            
+        
             // This does nearly all the same things as above, but for a UILabel
             // This is only visible if showCubes is set to false.
             var txtLabel = UILabel(frame: CGRectMake(x, y, cubeSize, cubeSize))
             txtLabel.text = "Hello!"
             txtLabel.userInteractionEnabled = true
-            txtLabel.tag = CUBE_TAG
             txtLabel.layer.borderColor = UIColor(red: 0, green: 0.5, blue: 0, alpha: 1).CGColor
             txtLabel.layer.borderWidth = 1
             txtLabel.textColor = UIColor.blueColor()
             txtLabel.layer.cornerRadius = cubeSize/4.0
             txtLabel.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: "onDrag:"))
-            
-            self.view.addSubview(txtLabel)
-            
-            physicsObjects.append(txtLabel)
+
+            return txtLabel
         }
     }
 }
