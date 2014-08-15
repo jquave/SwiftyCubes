@@ -14,12 +14,14 @@ class ViewController: UIViewController {
     /// How many cubes?
     let numCubes: Float = 50.0
     
-    // Show cubes? (Shows text labels if false)
-    let showCubes = true
-    
-    // These properties are explained in detail as they're used
+    // An animator is used to store various UIDynamics behavior (gravity, for example)
     var animator = UIDynamicAnimator()
+    
+    // The gravity behavior, makes stuf fall
     var gravity = UIGravityBehavior()
+    
+    // The collision behavior makes things collide with each other.
+    // Without this they just sort of pass through each other.
     var collisionBehavior = UICollisionBehavior()
     
     /// The "texture" on our cubes.
