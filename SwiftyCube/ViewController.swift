@@ -25,7 +25,7 @@ class ViewController: UIViewController {
     var collisionBehavior = UICollisionBehavior()
     
     /// The "texture" on our cubes.
-    let colorPattern = UIColor(patternImage: UIImage(named: "checkered"))
+    let colorPattern = UIColor(patternImage: UIImage(named: "checkered")!)
     
     /// For each cube that is being dragged, we have a snapper. There can be multiple snappers because multitouch!
     var snappers = [UIView: UISnapBehavior]()
@@ -118,31 +118,32 @@ class ViewController: UIViewController {
     // This method is called whenever one of the gesture recognizers created in the addCube method detects a drag gesture.
     func onDrag(recognizer: UIPanGestureRecognizer) {
         // The recognizer's view is the view we added the gesture recognizer to - that is the cube view!
-        let cubeView = recognizer.view
+        if let cubeView = recognizer.view {
         
-        // The snappers dictionary contains the snap behaviours for each cube that is being dragged around.
-        // Since a drag gesture was performed, we want to remove the snap behaviour for that cube. We create a new one later.
-        if let snapper = snappers[cubeView] {
-            animator.removeBehavior(snapper)
-            snappers[cubeView] = nil
-        }
-        
-        // In case the gesture changed (it might also just have started, stopped, or been cancelled), we create a new UISnapBehavior.
-        if recognizer.state == .Changed {
-            let snapper = UISnapBehavior(
-                item: cubeView,
-                // We can get the point of the finger by asking the gesture recognizer for it's position in the view.
-                snapToPoint: recognizer.locationInView(self.view)
-            )
+            // The snappers dictionary contains the snap behaviours for each cube that is being dragged around.
+            // Since a drag gesture was performed, we want to remove the snap behaviour for that cube. We create a new one later.
+            if let snapper = snappers[cubeView] {
+                animator.removeBehavior(snapper)
+                snappers[cubeView] = nil
+            }
             
-            // Save the snapping behaviour in the dictionary so we can remove it when the finger moves next time.
-            snappers[cubeView] = snapper
+            // In case the gesture changed (it might also just have started, stopped, or been cancelled), we create a new UISnapBehavior.
+            if recognizer.state == .Changed {
+                let snapper = UISnapBehavior(
+                    item: cubeView,
+                    // We can get the point of the finger by asking the gesture recognizer for it's position in the view.
+                    snapToPoint: recognizer.locationInView(self.view)
+                )
                 
-            // Upping the damping makes the snap behavior more elastic and loose. It's a personal preference.
-            snapper.damping = 3
-            
-            // Now add the behavior to our animator so it kicks in.
-            animator.addBehavior(snapper)
+                // Save the snapping behaviour in the dictionary so we can remove it when the finger moves next time.
+                snappers[cubeView] = snapper
+                    
+                // Upping the damping makes the snap behavior more elastic and loose. It's a personal preference.
+                snapper.damping = 3
+                
+                // Now add the behavior to our animator so it kicks in.
+                animator.addBehavior(snapper)
+            }
         }
     }
     
