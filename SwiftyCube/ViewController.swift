@@ -119,7 +119,7 @@ class ViewController: UIViewController {
     func onDrag(recognizer: UIPanGestureRecognizer) {
         // The recognizer's view is the view we added the gesture recognizer to - that is the cube view!
         if let cubeView = recognizer.view {
-        
+         
             // The snappers dictionary contains the snap behaviours for each cube that is being dragged around.
             // Since a drag gesture was performed, we want to remove the snap behaviour for that cube. We create a new one later.
             if let snapper = snappers[cubeView] {
